@@ -5,8 +5,11 @@ const regd_users = express.Router();
 
 let users = [];
 
-const isValid = (username)=>{ //returns boolean
-//write code to check is the username is valid
+const isValid = (username)=>{ 
+    let userwithsamename = users.filter((user) => user.username === username);
+    if(userwithsamename.length > 0 ){
+        return true;
+    } else { return false; }
 }
 
 const authenticatedUser = (username,password)=>{
@@ -44,16 +47,39 @@ regd_users.post("/login", (req,res) => {
 
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
-    const isbn = req.query.isbn;
+    const isbn = req.params.isbn;
+    const review = req.body.reviews;
+    const username = req.session.authorization.username;
     let book = books[isbn];
     
+    if(!username) {
+        return res.status(403).json({message:"User not authenticated"});
+    }
+
     if(book){
-        let reviews = req.body.reviews;
-    }
-    if(reviews){
-        book
-    }
+        if(book.reviews[username]){
+            book.reviews[username] = review;
+            return res.status(200).json({message:`Review updated for ${username}`});
+        } else {
+            book.reviews[username] = review;
+            return res.status(200).json({message:`Review added for ${username}`});
+        } 
+    } else {
+        return res.status(404).json({message:"Book not found!"});
+    }  
    
+});
+
+regd_users.delete("/auth/review/:isbn",(req,res) => {
+    const isbn = req.params.isbn;
+    let username = req.session.authorization.username; 
+    
+    if(!username){
+        return res.status(403).send("Unauthenticated user!!");
+    } else {
+        delete books[isbn].reviews[username];
+        return res.status(200).send(`Review has been deleted for ${username}!`);
+    }
 });
 
 module.exports.authenticated = regd_users;
